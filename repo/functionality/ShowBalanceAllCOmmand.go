@@ -10,13 +10,16 @@ func (c *ShowBalanceAll) ParseArgs(args string) error {
 }
 
 func (c *ShowBalanceAll) Execute() error {
-	spliWiseIns := GetSplitwiseAppIns()
+	spliWiseIns := GetSplitWiseAppIns()
 	fnd := spliWiseIns.ShowAllExpense()
 
 	for _, ele := range fnd {
-		user := ele.ProvidedUSer
-		for us, expse := range ele.HisExpense {
-			fmt.Printf("%s -> %s = %v\n", user, us, expse)
+		payee := ele.Payee
+		for borrower, expse := range ele.Borrower {
+			if expse < 0.0 {
+				continue
+			}
+			fmt.Printf("%s -> %s = %v\n", borrower, payee, expse)
 		}
 	}
 

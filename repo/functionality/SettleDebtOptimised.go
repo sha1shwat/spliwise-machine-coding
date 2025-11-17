@@ -7,5 +7,6 @@ func (c *SettleDebtCommand) ParseArgs(args string) error {
 }
 
 func (c *SettleDebtCommand) Execute() error {
+
 	return nil
 }

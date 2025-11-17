@@ -1,38 +1,46 @@
 package functionality
 
-type SplitwiseApp struct {
-	txnNo       int
-	Expenses    map[int]Expense
-	UniqueUsers []string
-}
+import (
+	"fmt"
 
-type Expense struct {
-	PayD     string
-	UserList []string
-	Amts     []float64
+	mapset "github.com/deckarep/golang-set/v2"
+)
+
+type SplitWiseApp struct {
+	Transactions []Transaction
+	UniqueUsers  mapset.Set[string]
 }
 
 var (
-	SplitwiseAppIns *SplitwiseApp
+	txnNo           int
+	SplitWiseAppIns *SplitWiseApp
 )
 
-func newSplitwiseApp() *SplitwiseApp {
-	SplitwiseAppIns = &SplitwiseApp{
-		txnNo:    0,
-		Expenses: make(map[int]Expense),
-	}
-	return SplitwiseAppIns
+type Transaction struct {
+	txnId   string
+	payee   string
+	amount  float64
+	paidFor string
 }
 
-func GetSplitwiseAppIns() *SplitwiseApp {
-	if SplitwiseAppIns == nil {
-		SplitwiseAppIns = newSplitwiseApp()
+func newSplitWiseApp() *SplitWiseApp {
+	SplitWiseAppIns = &SplitWiseApp{
+		Transactions: make([]Transaction, 0),
+		UniqueUsers:  mapset.NewSet[string](),
 	}
-	return SplitwiseAppIns
+	txnNo = 0
+	return SplitWiseAppIns
 }
 
-func (app *SplitwiseApp) getAmtList(payee string, amt float64, userList []string, strategy string) []float64 {
-	total := len(userList) + 1
+func GetSplitWiseAppIns() *SplitWiseApp {
+	if SplitWiseAppIns == nil {
+		SplitWiseAppIns = newSplitWiseApp()
+	}
+	return SplitWiseAppIns
+}
+
+func (app *SplitWiseApp) getAmtList(payee string, amt float64, userList []string, strategy string) []float64 {
+	total := len(userList)
 	flt := float64(total)
 	eaamt := amt / flt
 
@@ -44,78 +52,74 @@ func (app *SplitwiseApp) getAmtList(payee string, amt float64, userList []string
 	return amtSplit
 }
 
-func (app *SplitwiseApp) AddExpense(payee string, userList []string, amt float64) {
+func (app *SplitWiseApp) AddExpense(payee string, userList []string, amt float64) {
 
-	app.Expenses[app.txnNo] = Expense{
-		UserList: userList,
-		Amts:     app.getAmtList(payee, amt, userList, "EQ"),
-		PayD:     payee,
+	dividedExpenses := app.getAmtList(payee, amt, userList, "EQ")
+
+	app.UniqueUsers.Add(payee)
+
+	for ind, user := range userList {
+		txn := Transaction{
+			payee:   payee,
+			amount:  dividedExpenses[ind],
+			paidFor: user,
+			txnId:   fmt.Sprintf("%d_%d", txnNo, ind),
+		}
+		app.UniqueUsers.Add(user)
+		app.Transactions = append(app.Transactions, txn)
 	}
-	app.UniqueUsers = append(app.UniqueUsers, payee)
-	app.UniqueUsers = append(app.UniqueUsers, userList...)
 
-	app.txnNo++
+	txnNo++
 }
 
-func (app *SplitwiseApp) ShowExpense(userID string) map[string]float64 {
+func (app *SplitWiseApp) ShowExpense(userID string) map[string]float64 {
 
 	expenses := make(map[string]float64)
-	for _, expense := range app.Expenses {
+	for _, txn := range app.Transactions {
 
-		if userID == expense.PayD {
-			for i, user := range expense.UserList {
-				_, ok := expenses[user]
-				if !ok {
-					expenses[user] = 0
-				}
-				expenses[user] += expense.Amts[i]
-			}
-		} else {
-			fnd := false
-			ind := -1
-
-			for i, user := range expense.UserList {
-				if userID == user {
-					fnd = true
-					ind = i
-
-					break
-				}
-			}
-
-			if fnd {
-				expenses[expense.PayD] -= expense.Amts[ind]
-			}
+		if txn.payee == txn.paidFor {
+			continue
 		}
+
+		if txn.payee != userID && txn.paidFor != userID {
+			continue
+		}
+
+		if txn.payee == userID {
+			expenses[txn.paidFor] += txn.amount
+		} else {
+			expenses[txn.payee] -= txn.amount
+		}
+
 	}
 
 	return expenses
 
 }
 
-type ExoenseALl struct {
-	ProvidedUSer string
-	HisExpense   map[string]float64
+type AllExpenseForUser struct {
+	Payee    string
+	Borrower map[string]float64
 }
 
-func (app *SplitwiseApp) ShowAllExpense() []ExoenseALl {
-	xoenseALlList := make([]ExoenseALl, 0)
-	vis := make(map[string]string, 0)
-	for _, uniqueUsers := range app.UniqueUsers {
-		_, ok := vis[uniqueUsers]
-		if ok {
-			continue
-		}
-		vis[uniqueUsers] = "vis"
-		expense := app.ShowExpense(uniqueUsers)
-		exoenseALl := ExoenseALl{
-			ProvidedUSer: uniqueUsers,
-			HisExpense:   expense,
+func (app *SplitWiseApp) ShowAllExpense() []AllExpenseForUser {
+	allExpenseList := make([]AllExpenseForUser, 0)
+
+	for uniqueUser := range app.UniqueUsers.Iter() {
+
+		expense := app.ShowExpense(uniqueUser)
+		allExpenseForUser := AllExpenseForUser{
+			Payee:    uniqueUser,
+			Borrower: expense,
 		}
 
-		xoenseALlList = append(xoenseALlList, exoenseALl)
+		allExpenseList = append(allExpenseList, allExpenseForUser)
 	}
 
-	return xoenseALlList
+	return allExpenseList
+
+}
+
+func (app *SplitWiseApp) SettleDebtOptimised() {
 
 }

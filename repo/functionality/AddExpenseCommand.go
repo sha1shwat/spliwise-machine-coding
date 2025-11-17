@@ -50,7 +50,7 @@ func (c *AddExpenseCommand) ParseArgs(args string) error {
 	}
 
 	for i := 0; i < int(numberOfUsers); i++ {
-		c.DebtUsersList = append(c.DebtUsersList, firstArgs[i])
+		c.DebtUsersList = append(c.DebtUsersList, strings.TrimSpace(firstArgs[i]))
 	}
 
 	c.Strategy = firstArgs[n-1]
@@ -61,8 +61,8 @@ func (c *AddExpenseCommand) ParseArgs(args string) error {
 
 func (c *AddExpenseCommand) Execute() error {
 
-	splitWiseIns := GetSplitwiseAppIns()
+	splitWiseIns := GetSplitWiseAppIns()
 	splitWiseIns.AddExpense(c.UserDPayment, c.DebtUsersList, c.TotalAmt)
-	fmt.Print("Expnse Added Successfully: ")
+	fmt.Print("Expnse Added Successfully \n ")
 	return nil
 }
